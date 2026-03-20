@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { mkDeck, shuffle, isScopa, score, cmpScore, enricoAI } from './game/logic';
+import { useWebHaptics } from "web-haptics/react";
 import {
     CW, CH, SUIT_SY, VAL_SX, BACK_SX, BACK_SY,
     TSLOTS, EH_XS, EH_Y, NH_XS, NH_Y,
@@ -28,6 +29,7 @@ export default function ScopaGame() {
     const modalCbRef = useRef(null);
     const modalOpenRef = useRef(false);
     const [modal, setModal] = useState(null); // { title, body }
+    const { trigger } = useWebHaptics();
 
     // ── Resize canvas display size ──
     const resize = useCallback(() => {
@@ -355,6 +357,12 @@ export default function ScopaGame() {
 
         function flash(t, c) {
             flashVal = FLASH_DURATION; flashTxt = t; flashCol = c || '#f0c040';
+            if (t.includes('SCOPA')) {
+                trigger([
+                    { duration: 60 },
+                    { delay: 60, duration: 60, intensity: 1 },
+                ]);
+            }
             animId = requestAnimationFrame(render);
         }
 
@@ -426,6 +434,9 @@ export default function ScopaGame() {
         // ─────────────────── Actions ───────────────────
         function selCard(c) {
             if (G.phase !== 'player') return;
+            trigger([
+                { duration: 8 },
+            ], { intensity: 0.3 });
             if (G.sel && G.sel.id === c.id) {
                 // Deselect
                 setOverlayTarget(G.sel.id, 0);
@@ -444,6 +455,9 @@ export default function ScopaGame() {
 
         function toggleTableCard(tc) {
             if (!G.sel || G.phase !== 'player') return;
+            trigger([
+                { duration: 8 },
+            ], { intensity: 0.3 });
             const idx = G.tablesel.findIndex(x => x.id === tc.id);
             if (idx >= 0) { G.tablesel.splice(idx, 1); setOverlayTarget(tc.id, 0); }
             else { G.tablesel.push(tc); setOverlayTarget(tc.id, 1); }
@@ -452,6 +466,9 @@ export default function ScopaGame() {
 
         function doTake() {
             if (!G.sel || !isValidCapture(G.sel, G.tablesel, G.table) || G.phase !== 'player') return;
+            trigger([
+                { duration: 8 },
+            ], { intensity: 0.3 });
             const c = G.sel, cap = G.tablesel;
             const sc = isScopa(G.table, cap);  // check BEFORE removing — board must be empty after
             removeFromTable(cap.map(x => x.id));
@@ -466,6 +483,9 @@ export default function ScopaGame() {
 
         function doDiscard() {
             if (!G.sel || G.phase !== 'player') return;
+            trigger([
+                { duration: 8 },
+            ], { intensity: 0.3 });
             // New rule: cannot discard a card if it can capture (single or multi-card)
             // Check if selected card can capture anything
             const sel = G.sel;
@@ -546,9 +566,13 @@ export default function ScopaGame() {
                     fadeMap.set(c.id, { val: 0 });
                     overlayMap.set(c.id, { val: 0, target: 0 });
                 });
-                G.phase = 'player';
+                // Preserve round starter: if round 1, player; else enrico
+                G.phase = (G.round === 1) ? 'player' : 'enrico';
                 scheduleAnim();
                 render();
+                if (G.phase === 'enrico') {
+                    enricoTimer = setTimeout(doEnrico, 600 + Math.random() * 900);
+                }
             } else {
                 endRound();
             }
@@ -610,13 +634,9 @@ export default function ScopaGame() {
                 overlayMap.set(c.id, { val: 0, target: 0 });
             });
             G.sel = null; G.tablesel = [];
-            // Alternate first turn: round 1 player, round 2 Enrico
-            if (G.round === 1) {
-                G.phase = 'player';
-                render();
-            } else {
-                G.phase = 'enrico';
-                render();
+            G.phase = (G.round === 1) ? 'player' : 'enrico';
+            render();
+            if (G.phase === 'enrico') {
                 enricoTimer = setTimeout(doEnrico, 600 + Math.random() * 900);
             }
         }
@@ -701,6 +721,9 @@ export default function ScopaGame() {
 
     // ── Modal OK handler (React side) ──
     const handleModalOk = useCallback(() => {
+        trigger([
+            { duration: 8 },
+        ], { intensity: 0.3 });
         const cb = modalCbRef.current;
         modalCbRef.current = null;
         modalOpenRef.current = false;
