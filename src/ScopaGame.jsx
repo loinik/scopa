@@ -1,5 +1,8 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { mkDeck, shuffle, isScopa, score, cmpScore, enricoAI } from './game/logic';
+import bgUrl from './assets/CAS_Scopa_BG.png';
+import ovlUrl from './assets/CAS_SCPACRD_OVL.png';
+import cardsUrl from './assets/CAS_SCPACRD-TXT_OVL.png';
 import {
     CW, CH, SUIT_SY, VAL_SX, BACK_SX, BACK_SY,
     TSLOTS, EH_XS, EH_Y, NH_XS, NH_Y,
@@ -122,9 +125,9 @@ export default function ScopaGame() {
             img.onload = () => { imgs[key] = img; if (++loadCount === 3 && mounted) initGame(); };
             img.src = src;
         }
-        loadImg('bg', '/CAS_Scopa_BG.png');
-        loadImg('ovl', '/CAS_SCPACRD_OVL.png');
-        loadImg('cards', '/CAS_SCPACRD-TXT_OVL.png');
+        loadImg('bg', bgUrl);
+        loadImg('ovl', ovlUrl);
+        loadImg('cards', cardsUrl);
 
         // ─────────────────── Draw helpers ───────────────────
         function drawCard(c, x, y) {
