@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0" />
+        content="width=device-width, initial-scale=1.0, maximum-scale=10.0, minimum-scale=1.0, user-scalable=yes" />
     <title>Scopa – Nancy Drew: Phantom of Venice</title>
     <link rel="manifest" href="/scopa/manifest.webmanifest" />
     <style>
@@ -16,33 +16,23 @@
             padding: 0;
         }
 
-        html {
-            height: -webkit-fill-available;
-        }
-
         body {
             background: #000000;
-            width: 100vw;
             height: 100vh;
-            height: 100dvh;
-            /* современный способ, учитывает адресную строку */
+            width: 100vw;
+            max-width: 100dvw;
+            max-height: 100dvh;
             min-height: -webkit-fill-available;
-            /* fallback для iOS Safari */
             overflow: hidden;
-            padding-top: env(safe-area-inset-top);
-            padding-bottom: env(safe-area-inset-bottom);
-            padding-left: env(safe-area-inset-left);
-            padding-right: env(safe-area-inset-right);
         }
 
         #root {
-            position: fixed;
-            /* fixed вместо absolute — всегда относительно viewport */
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 640px;
-            height: 385px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            margin: auto;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -50,48 +40,27 @@
 
         #landscape-warning {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            width: 100vw;
+            height: 100vh;
             background: #000;
-            color: #f0c040;
+            color:
+                #f0c040;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 22px;
             z-index: 9999;
+            padding: 0;
         }
     </style>
 </head>
 
 <body>
     <div id="root"></div>
-    <script>
-        // Prevent pinch zoom
-        document.addEventListener('touchmove', function (e) {
-            if (e.touches.length > 1) e.preventDefault();
-        }, { passive: false });
-
-        // Force landscape orientation
-        function checkOrientation() {
-            const warn = document.getElementById('landscape-warning');
-            if (window.innerWidth < window.innerHeight) {
-                if (!warn) {
-                    document.body.insertAdjacentHTML('beforeend',
-                        '<div id="landscape-warning">Please rotate your device to landscape mode</div>');
-                }
-            } else {
-                if (warn) warn.remove();
-            }
-        }
-
-        // orientationchange срабатывает ДО того, как viewport обновился —
-        // ждём, пока браузер закончит перестройку
-        window.addEventListener('orientationchange', () => {
-            setTimeout(checkOrientation, 300);
-        });
-
-        window.addEventListener('resize', checkOrientation);
-        checkOrientation();
-    </script>
     <script type="module" src="/src/main.jsx"></script>
 </body>
 
