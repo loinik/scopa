@@ -1,0 +1,35 @@
+# Build output
+/dist/
+
+# Node modules
+/node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Misc
+*.log
+*.tmp
+
+# Local env
+.env
+.env.*
+
+# Coverage
+coverage/
+
+# Jupyter
+*.ipynb_checkpoints/
+
+# Ignore PNG assets if needed (uncomment)
+# /public/*.png
