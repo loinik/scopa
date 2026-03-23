@@ -149,9 +149,9 @@ export default function ScopaGame() {
             img.onload = () => { imgs[key] = img; if (++loadCount === 3 && mounted) initGame(); };
             img.src = src;
         }
-        loadImg('bg', import.meta.env.BASE_URL + 'CAS_Scopa_BG.png');
-        loadImg('ovl', import.meta.env.BASE_URL + 'CAS_SCPACRD_OVL.png');
-        loadImg('cards', import.meta.env.BASE_URL + 'CAS_SCPACRD-TXT_OVL.png');
+        loadImg('bg', import.meta.env.BASE_URL + 'video/CAS_Scopa_BG.png');
+        loadImg('ovl', import.meta.env.BASE_URL + 'ciftree/CAS_SCPACRD_OVL.png');
+        loadImg('cards', import.meta.env.BASE_URL + 'ciftree/CAS_SCPACRD-TXT_OVL.png');
 
         // ─────────────────── Draw helpers ───────────────────
         function drawCard(c, x, y) {
@@ -380,9 +380,42 @@ export default function ScopaGame() {
             }
         }
 
-        function flash(t, c) {
+        // --- Scopa audio ---
+        const scopaAudio = {
+            en: {
+                player: [
+                    'NETVO019_en_SFX.mp3',
+                    'NETVO020_en_SFX.mp3',
+                    'NETVO021_en_SFX.mp3',
+                    'NETVO023_en_SFX.mp3',
+                    'NETVO023x_en_SFX.mp3',
+                ],
+                enemy: [
+                    'ETVO19_en_SFX.mp3',
+                    'ETVO20_en_SFX.mp3',
+                    'ETVO21_en_SFX.mp3',
+                    'ETVO22_en_SFX.mp3',
+                    'ETVO23_en_SFX.mp3',
+                ],
+            },
+            // Можно добавить другие языки по мере появления файлов
+        };
+
+        function playScopaAudio(role) {
+            const lang = (locale in scopaAudio) ? locale : 'en';
+            const arr = scopaAudio[lang]?.[role] || scopaAudio['en'][role];
+            if (!arr || !arr.length) return;
+            const file = arr[Math.floor(Math.random() * arr.length)];
+            const audio = new Audio(import.meta.env.BASE_URL + 'sound/' + file);
+            audio.volume = 1.0;
+            audio.play();
+        }
+
+        function flash(t, c, role) {
             flashVal = FLASH_DURATION; flashTxt = t; flashCol = c || '#f0c040';
             if (t.includes('SCOPA')) {
+                if (role === 'player') playScopaAudio('player');
+                else if (role === 'enemy') playScopaAudio('enemy');
                 trigger([
                     { duration: 60 },
                     { delay: 60, duration: 60, intensity: 1 },
@@ -516,7 +549,7 @@ export default function ScopaGame() {
             removeFromHand(c.id);
             G.lastCap = 'p';
             clearAllOverlays();
-            if (sc) { G.pSc++; flash('⚡ SCOPA!', '#f0c040'); }
+            if (sc) { G.pSc++; flash('⚡ SCOPA!', '#f0c040', 'player'); }
             G.sel = null; G.tablesel = [];
             afterP();
         }
@@ -585,12 +618,7 @@ export default function ScopaGame() {
                 G.lastCap = 'e';
                 if (sc) {
                     G.eSc++;
-                    // Add vibration for opponent's scopa
-                    trigger([
-                        { duration: 60 },
-                        { delay: 60, duration: 60, intensity: 1 },
-                    ]);
-                    flash('Enrico SCOPA!', '#e07070');
+                    flash('Enrico SCOPA!', '#e07070', 'enemy');
                 }
             } else {
                 addToTable(c);
