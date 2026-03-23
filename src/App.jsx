@@ -1,11 +1,15 @@
 
+
 import { useState, useCallback } from 'react';
 import MainMenu from './MainMenu';
 import ScopaGame from './ScopaGame';
 
 export default function App() {
   const [showMenu, setShowMenu] = useState(true);
-  const [locale, setLocale] = useState(null);
+  const [locale, setLocale] = useState(() => {
+    const saved = localStorage.getItem('scopa_lang');
+    return saved || null;
+  });
   const [settings, setSettings] = useState({
     music: true,
     sfx: true,
@@ -14,7 +18,10 @@ export default function App() {
   });
 
   const handlePlay = useCallback(() => setShowMenu(false), []);
-  const handleLocaleChange = useCallback(l => setLocale(l), []);
+  const handleLocaleChange = useCallback(l => {
+    setLocale(l);
+    localStorage.setItem('scopa_lang', l);
+  }, []);
 
   return showMenu ? (
     <MainMenu
@@ -22,8 +29,9 @@ export default function App() {
       onLocaleChange={handleLocaleChange}
       settings={settings}
       setSettings={setSettings}
+      locale={locale}
     />
   ) : (
-    <ScopaGame />
+    <ScopaGame locale={locale} />
   );
 }

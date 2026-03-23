@@ -45,7 +45,11 @@ function playFlipAudio() {
     audio.play();
 }
 
-function detectLocale() {
+
+function detectLocale(propLocale) {
+    if (propLocale && LOCALES[propLocale]) return propLocale;
+    const saved = localStorage.getItem('scopa_lang');
+    if (saved && LOCALES[saved]) return saved;
     const lang = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
     if (lang.startsWith('fr')) return 'fr';
     if (lang.startsWith('de')) return 'de';
@@ -57,7 +61,9 @@ function detectLocale() {
 }
 
 export default function ScopaGame() {
-    const locale = useMemo(() => detectLocale(), []);
+    // Получаем locale через пропсы
+    const props = arguments[0] || {};
+    const locale = useMemo(() => detectLocale(props.locale), [props.locale]);
     const t = LOCALES[locale] || LOCALES.en;
 
     // ── Fullscreen handler ──
