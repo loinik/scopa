@@ -1,0 +1,21 @@
+// Kазахский (Kazakh) translations
+export default {
+    endRound: 'Раундтың соңы',
+    scoring: 'Раунд ұпайлары',
+    mostCards: 'Ең көп карта',
+    mostCoins: 'Ең көп тиын',
+    settebello: 'Settebello',
+    primiera: 'Primiera',
+    scopas: 'Scopas',
+    yourTotal: 'Сіздің жалпыңыз',
+    enricoTotal: 'Энриконың жалпысы',
+    you: 'Нәнсия',
+    enrico: 'Энрико',
+    youWin: '🏆 Сіз жеңдіңіз!',
+    enricoWins: '💀 Энрико жеңді!',
+    finalScore: 'Қорытынды ұпай',
+    continue: 'Жалғастыру',
+    tie: 'Тең',
+    yes: 'Иә',
+    no: 'Жоқ',
+};

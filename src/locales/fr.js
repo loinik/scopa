@@ -1,0 +1,21 @@
+// French translations
+export default {
+    endRound: 'Fin de la manche',
+    scoring: 'Comptage des points',
+    mostCards: 'Le plus de cartes',
+    mostCoins: 'Le plus de pièces',
+    settebello: 'Settebello',
+    primiera: 'Primiera',
+    scopas: 'Scopas',
+    yourTotal: 'Votre total',
+    enricoTotal: 'Total d’Enrico',
+    you: 'Nancy',
+    enrico: 'Enrico',
+    youWin: '🏆 Vous gagnez !',
+    enricoWins: '💀 Enrico gagne !',
+    finalScore: 'Score final',
+    continue: 'Continuer',
+    tie: 'Égalité',
+    yes: 'Oui',
+    no: 'Non',
+};

@@ -1,4 +1,6 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+
+
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { mkDeck, shuffle, isScopa, score, cmpScore, enricoAI } from './game/logic';
 import { useWebHaptics } from "web-haptics/react";
 import {
@@ -8,7 +10,30 @@ import {
     EBADGE, NBADGE,
 } from './game/constants';
 
+import en from './locales/en.js';
+import it from './locales/it.js';
+import kk from './locales/kk.js';
+import uk from './locales/uk.js';
+import ru from './locales/ru.js';
+import fr from './locales/fr.js';
+import de from './locales/de.js';
+
+const LOCALES = { en, it, kk, uk, ru, fr, de };
+
+function detectLocale() {
+    const lang = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+    if (lang.startsWith('fr')) return 'fr';
+    if (lang.startsWith('de')) return 'de';
+    if (lang.startsWith('uk')) return 'uk';
+    if (lang.startsWith('kk')) return 'kk';
+    if (lang.startsWith('ru')) return 'ru';
+    if (lang.startsWith('it')) return 'it';
+    return 'en';
+}
+
 export default function ScopaGame() {
+    const locale = useMemo(() => detectLocale(), []);
+    const t = LOCALES[locale] || LOCALES.en;
     // ── Fullscreen handler ──
     useEffect(() => {
         function handleFullscreen(e) {
@@ -174,7 +199,7 @@ export default function ScopaGame() {
             ctx.strokeStyle = '#c8960c'; ctx.lineWidth = 2.5;
             ctx.beginPath(); ctx.roundRect(x, y, W, H, 8); ctx.stroke();
             ctx.font = 'bold 18px "Palatino Linotype",Georgia,serif';
-            ctx.fillStyle = '#f0c018'; ctx.fillText('ENRICO', x + 8, y + 21);
+            ctx.fillStyle = '#f0c018'; ctx.fillText(t.enrico.toUpperCase(), x + 8, y + 21);
             ctx.fillStyle = '#6a0808';
             ctx.beginPath(); ctx.roundRect(x + 8, y + 28, W - 16, 22, 4); ctx.fill();
             ctx.font = 'bold 14px "Palatino Linotype"';
@@ -194,7 +219,7 @@ export default function ScopaGame() {
             ctx.strokeStyle = '#18c8d0'; ctx.lineWidth = 2.5;
             ctx.beginPath(); ctx.roundRect(x, y, W, H, 8); ctx.stroke();
             ctx.font = 'bold 18px "Palatino Linotype",Georgia,serif';
-            ctx.fillStyle = '#18c8d0'; ctx.fillText('NANCY', x + 8, y + 21);
+            ctx.fillStyle = '#18c8d0'; ctx.fillText(t.you.toUpperCase(), x + 8, y + 21);
             ctx.fillStyle = '#0a1850';
             ctx.beginPath(); ctx.roundRect(x + 8, y + 28, W - 16, 22, 4); ctx.fill();
             ctx.font = 'bold 14px "Palatino Linotype"';
@@ -411,17 +436,32 @@ export default function ScopaGame() {
 
         // ─────────────────── Game state ───────────────────
         function initGame() {
+            // Deal with 3 kings on table: re-deal until not 3 kings
+            function dealValid() {
+                let deck, table;
+                do {
+                    deck = shuffle(mkDeck());
+                    const pH = deck.slice(0, 3);
+                    const eH = deck.slice(3, 6);
+                    table = deck.slice(6, 10);
+                    const kings = table.filter(c => c.v === 10).length;
+                    if (kings < 3) {
+                        return { deck: deck.slice(10), pH, eH, table };
+                    }
+                } while (true);
+            }
+            const deal = dealValid();
             G = {
-                deck: shuffle(mkDeck()),
+                deck: deal.deck,
                 pH: [], handSlots: {},
                 eH: [], eHandSlots: {}, enricoAnim: null,
                 table: [], tableSlots: {},
                 pP: [], eP: [], pSc: 0, eSc: 0, totP: 0, totE: 0,
                 phase: 'player', sel: null, tablesel: [], lastCap: '', round: 1,
             };
-            addToHand(G.deck.splice(0, 3));
-            addToEnricoHand(G.deck.splice(0, 3));
-            G.table = G.deck.splice(0, 4);
+            addToHand(deal.pH);
+            addToEnricoHand(deal.eH);
+            G.table = deal.table;
             G.table.forEach((c, i) => { G.tableSlots[c.id] = i; });
             // Game start: all cards appear immediately (no fade-in)
             [...G.pH, ...G.eH, ...G.table].forEach(c => {
@@ -543,7 +583,15 @@ export default function ScopaGame() {
                 removeFromTable(cap.map(x => x.id));
                 G.eP.push(c, ...cap);
                 G.lastCap = 'e';
-                if (sc) { G.eSc++; flash('Enrico SCOPA!', '#e07070'); }
+                if (sc) {
+                    G.eSc++;
+                    // Add vibration for opponent's scopa
+                    trigger([
+                        { duration: 60 },
+                        { delay: 60, duration: 60, intensity: 1 },
+                    ]);
+                    flash('Enrico SCOPA!', '#e07070');
+                }
             } else {
                 addToTable(c);
                 addFadeIn(c.id);
@@ -589,23 +637,26 @@ export default function ScopaGame() {
             G.totP += pts.p; G.totE += pts.e;
             G.phase = 'end';
 
-            const L = (a, b, n) => `${n}: ${a} vs ${b}  →  ${a > b ? 'Nancy +1' : b > a ? 'Enrico +1' : 'pari'}`;
+            // Localized scoring summary
+            const lines = [];
+            lines.push(`${t.scoring} ${G.round}`);
+            lines.push('─────────────────────────────');
+            lines.push(`${t.mostCards}:        ${ps.n} vs ${es.n}   →  ${ps.n > es.n ? t.you + ' +1' : es.n > ps.n ? t.enrico + ' +1' : t.tie}`);
+            lines.push(`${t.mostCoins}:        ${ps.den} vs ${es.den}   →  ${ps.den > es.den ? t.you + ' +1' : es.den > ps.den ? t.enrico + ' +1' : t.tie}`);
+            lines.push(`${t.settebello}:        ${ps.sb ? t.you + ' ✓' : es.sb ? t.enrico + ' ✓' : '—'}`);
+            lines.push(`${t.primiera}:          ${ps.pp} vs ${es.pp}   →  ${ps.pp > es.pp ? t.you + ' +1' : es.pp > ps.pp ? t.enrico + ' +1' : t.tie}`);
+            lines.push(`${t.scopas}:            ${ps.sc} vs ${es.sc}   →  ${ps.sc > es.sc ? t.you + ' +1' : es.sc > ps.sc ? t.enrico + ' +1' : t.tie}`);
+            lines.push('─────────────────────────────');
+            lines.push(`${t.yourTotal}:   ${G.totP}`);
+            lines.push(`${t.enricoTotal}: ${G.totE}`);
             showModal(
-                `Fine Round ${G.round}`,
-                [
-                    L(ps.n, es.n, 'Carte'),
-                    L(ps.den, es.den, 'Denari'),
-                    `Settebello: ${ps.sb ? 'Nancy ✓' : 'Enrico ✓'}`,
-                    L(ps.pp, es.pp, 'Primiera'),
-                    L(ps.sc, es.sc, 'Scope'),
-                    '─────────────────────────',
-                    `Nancy ${G.totP}  —  Enrico ${G.totE}`,
-                ].join('\n'),
+                `${t.endRound} ${G.round}`,
+                lines.join('\n'),
                 () => {
                     if (G.round >= 2) {
                         showModal(
-                            G.totP > G.totE ? '🏆 Nancy Vince!' : '💀 Enrico Vince!',
-                            `Punteggio: Nancy ${G.totP} — Enrico ${G.totE}`,
+                            G.totP > G.totE ? t.youWin : t.enricoWins,
+                            `${t.finalScore}: ${t.you} ${G.totP} — ${t.enrico} ${G.totE}`,
                             () => { G.totP = 0; G.totE = 0; G.round = 1; newRound(); }
                         );
                     } else {
@@ -619,15 +670,30 @@ export default function ScopaGame() {
         function newRound() {
             fadeMap.clear();
             overlayMap.clear();
-            G.deck = shuffle(mkDeck());
+            // Deal with 3 kings on table: re-deal until not 3 kings
+            function dealValid() {
+                let deck, table;
+                do {
+                    deck = shuffle(mkDeck());
+                    const pH = deck.slice(0, 3);
+                    const eH = deck.slice(3, 6);
+                    table = deck.slice(6, 10);
+                    const kings = table.filter(c => c.v === 10).length;
+                    if (kings < 3) {
+                        return { deck: deck.slice(10), pH, eH, table };
+                    }
+                } while (true);
+            }
+            const deal = dealValid();
+            G.deck = deal.deck;
             G.pP = []; G.eP = []; G.pSc = 0; G.eSc = 0; G.lastCap = '';
             G.tableSlots = {}; G.table = [];
             G.handSlots = {}; G.pH = [];
             G.eHandSlots = {}; G.eH = [];
             G.enricoAnim = null;
-            addToHand(G.deck.splice(0, 3));
-            addToEnricoHand(G.deck.splice(0, 3));
-            G.table = G.deck.splice(0, 4);
+            addToHand(deal.pH);
+            addToEnricoHand(deal.eH);
+            G.table = deal.table;
             G.table.forEach((c, i) => { G.tableSlots[c.id] = i; });
             [...G.pH, ...G.eH, ...G.table].forEach(c => {
                 fadeMap.set(c.id, { val: 1 });
@@ -777,7 +843,7 @@ export default function ScopaGame() {
                             letterSpacing: '.5px',
                         }}
                     >
-                        Continua
+                        {t.continue}
                     </button>
                 </div>
             )}

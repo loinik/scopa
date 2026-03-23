@@ -1,0 +1,21 @@
+// Deutsch (German) translations
+export default {
+    endRound: 'Rundenende',
+    scoring: 'Rundenwertung',
+    mostCards: 'Meiste Karten',
+    mostCoins: 'Meiste Münzen',
+    settebello: 'Settebello',
+    primiera: 'Primiera',
+    scopas: 'Scopas',
+    yourTotal: 'Dein Gesamtwert',
+    enricoTotal: 'Enricos Gesamtwert',
+    you: 'Nancy',
+    enrico: 'Enrico',
+    youWin: '🏆 Du gewinnst!',
+    enricoWins: '💀 Enrico gewinnt!',
+    finalScore: 'Endstand',
+    continue: 'Weiter',
+    tie: 'Unentschieden',
+    yes: 'Ja',
+    no: 'Nein',
+};

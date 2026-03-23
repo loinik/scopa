@@ -1,0 +1,21 @@
+// English translations
+export default {
+    endRound: 'End of Round',
+    scoring: 'Scoring for Round',
+    mostCards: 'Most cards',
+    mostCoins: 'Most coins',
+    settebello: 'Settebello',
+    primiera: 'Primiera',
+    scopas: 'Scopas',
+    yourTotal: 'Your total',
+    enricoTotal: 'Enrico total',
+    you: 'Nancy',
+    enrico: 'Enrico',
+    youWin: '🏆 You win!',
+    enricoWins: '💀 Enrico wins!',
+    finalScore: 'Final score',
+    continue: 'Continue',
+    tie: 'Tie',
+    yes: 'Yes',
+    no: 'No',
+};

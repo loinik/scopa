@@ -1,0 +1,21 @@
+// Українська (Ukrainian) translations
+export default {
+    endRound: 'Кінець раунду',
+    scoring: 'Підрахунок балів',
+    mostCards: 'Найбільше карт',
+    mostCoins: 'Найбільше монет',
+    settebello: 'Settebello',
+    primiera: 'Primiera',
+    scopas: 'Scopas',
+    yourTotal: 'Ваш підсумок',
+    enricoTotal: 'Підсумок Енріко',
+    you: 'Ненсі',
+    enrico: 'Енріко',
+    youWin: '🏆 Ви виграли!',
+    enricoWins: '💀 Енріко виграв!',
+    finalScore: 'Фінальний рахунок',
+    continue: 'Продовжити',
+    tie: 'Нічия',
+    yes: 'Так',
+    no: 'Ні',
+};

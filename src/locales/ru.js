@@ -1,0 +1,21 @@
+// русский (Russian) translations
+export default {
+    endRound: 'Конец раунда',
+    scoring: 'Подсчет очков',
+    mostCards: 'Больше всего карт',
+    mostCoins: 'Больше всего монет',
+    settebello: 'Settebello',
+    primiera: 'Primiera',
+    scopas: 'Scopas',
+    yourTotal: 'Ваш итог',
+    enricoTotal: 'Итог Энрико',
+    you: 'Нэнси',
+    enrico: 'Энрико',
+    youWin: '🏆 Вы выиграли!',
+    enricoWins: '💀 Энрико выиграл!',
+    finalScore: 'Финальный счет',
+    continue: 'Продолжить',
+    tie: 'Ничья',
+    yes: 'Да',
+    no: 'Нет',
+};
