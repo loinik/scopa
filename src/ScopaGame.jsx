@@ -1,5 +1,3 @@
-
-
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { mkDeck, shuffle, isScopa, score, cmpScore, enricoAI } from './game/logic';
 import { useWebHaptics } from "web-haptics/react";
@@ -20,6 +18,33 @@ import de from './locales/de.js';
 
 const LOCALES = { en, it, kk, uk, ru, fr, de };
 
+// --- Card Deal and Flip audio ---
+const dealAudioFiles = [
+    'Card_Deal01_SFX.mp3',
+    'Card_Deal02_SFX.mp3',
+];
+const flipAudioFiles = [
+    'CardFlip01_SFX.mp3',
+    'CardFlip02_SFX.mp3',
+    'CardFlip03_SFX.mp3',
+    'CardFlip04_SFX.mp3',
+    'CardFlip05_SFX.mp3',
+];
+
+function playDealAudio() {
+    const file = dealAudioFiles[Math.floor(Math.random() * dealAudioFiles.length)];
+    const audio = new Audio(import.meta.env.BASE_URL + 'sound/' + file);
+    audio.volume = 1.0;
+    audio.play();
+}
+
+function playFlipAudio() {
+    const file = flipAudioFiles[Math.floor(Math.random() * flipAudioFiles.length)];
+    const audio = new Audio(import.meta.env.BASE_URL + 'sound/' + file);
+    audio.volume = 1.0;
+    audio.play();
+}
+
 function detectLocale() {
     const lang = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
     if (lang.startsWith('fr')) return 'fr';
@@ -34,6 +59,7 @@ function detectLocale() {
 export default function ScopaGame() {
     const locale = useMemo(() => detectLocale(), []);
     const t = LOCALES[locale] || LOCALES.en;
+
     // ── Fullscreen handler ──
     useEffect(() => {
         function handleFullscreen(e) {
@@ -50,10 +76,11 @@ export default function ScopaGame() {
         window.addEventListener('keydown', handleFullscreen);
         return () => window.removeEventListener('keydown', handleFullscreen);
     }, []);
+
     const canvasRef = useRef(null);
     const modalCbRef = useRef(null);
     const modalOpenRef = useRef(false);
-    const [modal, setModal] = useState(null); // { title, body }
+    const [modal, setModal] = useState(null);
     const { trigger } = useWebHaptics();
 
     // ── Resize canvas display size ──
@@ -76,9 +103,8 @@ export default function ScopaGame() {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
 
-        // Config
-        const FLASH_DURATION = 1250; // Flash duration in frames
-        const OVERLAY_COLOR = '#cc0000'; // Overlay color for selected cards
+        const FLASH_DURATION = 1250;
+        const OVERLAY_COLOR = '#cc0000';
 
         const imgs = {};
         let G = null;
@@ -88,14 +114,10 @@ export default function ScopaGame() {
         let enricoTimer = null;
         let mounted = true;
 
-        // ── Off-screen canvas for clipped red overlay (source-atop compositing) ──
         const selCanvas = document.createElement('canvas');
         selCanvas.width = CW; selCanvas.height = CH;
         const selCtx = selCanvas.getContext('2d');
 
-        // ── Per-card animation maps ──
-        // fadeMap    : id → { val: 0..1 }               — fade-in alpha
-        // overlayMap : id → { val: 0..1, target: 0|1 }  — red overlay
         const fadeMap = new Map();
         const overlayMap = new Map();
 
@@ -155,17 +177,14 @@ export default function ScopaGame() {
 
         // ─────────────────── Draw helpers ───────────────────
         function drawCard(c, x, y) {
-            // -2,-2: shifts within the sprite to include the shadow pixels on all edges
             ctx.drawImage(imgs.cards, VAL_SX[c.v - 1], SUIT_SY[c.s], CW, CH, x - 2, y - 2, CW, CH);
         }
-        // Draw card with red overlay clipped to its own non-transparent pixels (no bleed on shadows).
-        // Uses an off-screen canvas so source-atop only affects the card pixels, not the background.
         function drawCardSelected(c, x, y, redAlpha) {
             selCtx.clearRect(0, 0, CW, CH);
             selCtx.drawImage(imgs.cards, VAL_SX[c.v - 1], SUIT_SY[c.s], CW, CH, 0, 0, CW, CH);
             selCtx.save();
             selCtx.globalCompositeOperation = 'source-atop';
-            selCtx.globalAlpha = redAlpha * 0.72;  // 0.72 → noticeably dark
+            selCtx.globalAlpha = redAlpha * 0.72;
             selCtx.fillStyle = OVERLAY_COLOR;
             selCtx.fillRect(0, 0, CW, CH);
             selCtx.restore();
@@ -174,7 +193,6 @@ export default function ScopaGame() {
         function drawBack(x, y) {
             ctx.drawImage(imgs.cards, BACK_SX, BACK_SY, CW, CH, x - 2, y - 2, CW, CH);
         }
-        // Buttons: completely invisible when not active
         function drawOvlBtn(ovlSrc, rect, active) {
             if (!active) return;
             ctx.drawImage(imgs.ovl, ovlSrc.sx, ovlSrc.sy, ovlSrc.sw, ovlSrc.sh,
@@ -232,23 +250,21 @@ export default function ScopaGame() {
             ctx.font = '16px serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#18c8d0';
             ctx.fillText('🕶️', x + W - 18, y + 25); ctx.textAlign = 'left';
         }
+
         function isValidCapture(sel, tablesel, table) {
             if (!sel || !tablesel.length) return false;
             if (tablesel.length === 1) return tablesel[0].v === sel.v;
             const sum = tablesel.reduce((a, c) => a + c.v, 0);
             if (sum !== sel.v) return false;
-            // Per Scopa rules: can't use a multi-card combination if a single
-            // card of the same value exists on the table — you must take that instead.
             return !table.some(t => t.v === sel.v);
         }
-        // Does ANY hand card have a possible capture on the current table?
         function canAnyCapture() {
             if (!G || !G.pH.length || !G.table.length) return false;
             const n = G.table.length;
             for (const card of G.pH) {
                 for (const tc of G.table) if (tc.v === card.v) return true;
                 for (let mask = 3; mask < (1 << n); mask++) {
-                    if ((mask & (mask - 1)) === 0) continue; // single-bit masks already checked above
+                    if ((mask & (mask - 1)) === 0) continue;
                     let sum = 0;
                     for (let i = 0; i < n; i++) if (mask & (1 << i)) sum += G.table[i].v;
                     if (sum === card.v) return true;
@@ -263,13 +279,11 @@ export default function ScopaGame() {
             ctx.clearRect(0, 0, 640, 385);
             ctx.drawImage(imgs.bg, 0, 0, 640, 385);
 
-            // Deck indicators — hidden when the draw pile is exhausted
             if (G.deck.length > 0 && imgs.ovl) {
                 ctx.drawImage(imgs.ovl, 106, 1, 104, 104, SLOT_2.x, SLOT_2.y, SLOT_2.w, SLOT_2.h);
                 ctx.drawImage(imgs.ovl, 1, 1, 104, 104, SLOT_1.x, SLOT_1.y, SLOT_1.w, SLOT_1.h);
             }
 
-            // Table cards — each card is fixed to its assigned slot; slots never shift on capture/deal
             for (const c of G.table) {
                 const sl = TSLOTS[G.tableSlots[c.id]];
                 if (!sl) continue;
@@ -284,7 +298,6 @@ export default function ScopaGame() {
                 ctx.restore();
             }
 
-            // Enrico hand — fixed slots; played card shown face-up during his turn animation
             for (const c of G.eH) {
                 const slotIdx = G.eHandSlots[c.id];
                 if (slotIdx === undefined) continue;
@@ -304,20 +317,16 @@ export default function ScopaGame() {
                 }
             }
 
-            // Buttons: invisible until active; DISCARD off when table cards selected or table full + capture exists
             const anyTableSel = G.tablesel.length > 0;
             const canTake = G.phase === 'player' && isValidCapture(G.sel, G.tablesel, G.table);
             const tableFull = G.table.length >= 10;
             let canDiscard = false;
             if (G.phase === 'player' && !!G.sel && !anyTableSel && !(tableFull && canAnyCapture())) {
-                // Discard allowed only if selected card cannot capture (single or multi-card)
                 const sel = G.sel;
                 let canCapture = false;
-                // Single card match
                 for (const tc of G.table) {
                     if (tc.v === sel.v) { canCapture = true; break; }
                 }
-                // Multi-card match
                 if (!canCapture && G.table.length > 1) {
                     const n = G.table.length;
                     for (let mask = 3; mask < (1 << n); mask++) {
@@ -331,10 +340,7 @@ export default function ScopaGame() {
             }
             drawOvlBtn(OVL_TAKE, BTN_T, canTake);
             drawOvlBtn(OVL_DISCARD, BTN_D, canDiscard);
-            //   drawCircBtn('✕', BTN_X);
-            //   drawCircBtn('?', BTN_Q);
 
-            // Nancy's hand — each card fixed to its assigned slot
             for (const c of G.pH) {
                 const slotIdx = G.handSlots[c.id];
                 if (slotIdx === undefined) continue;
@@ -349,23 +355,9 @@ export default function ScopaGame() {
                 ctx.restore();
             }
 
-            // Score badges
             drawEnricoBadge(G.totE, G.eSc);
             drawNancyBadge(G.totP, G.pSc);
 
-            // Info text
-            //   ctx.font = '10px "Palatino Linotype"'; ctx.fillStyle = 'rgba(200,180,100,0.7)';
-            //   ctx.fillText(`Mazzo: ${G.deck.length}`,  SLOT_1.x,      SLOT_1.y - 5);
-            //   ctx.fillText(`Carte: ${G.pP.length}`,    SLOT_1.x + 70, SLOT_1.y - 5);
-
-            // Enrico thinking indicator
-            //   if (G.phase === 'enrico') {
-            //     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(150, 8, 130, 18);
-            //     ctx.font = 'italic 11px "Palatino Linotype"'; ctx.fillStyle = '#e08060';
-            //     ctx.fillText('Enrico pensa…', 153, 20);
-            //   }
-
-            // Flash overlay
             if (flashVal > 0) {
                 ctx.save();
                 ctx.globalAlpha = flashVal / FLASH_DURATION * 0.45;
@@ -380,7 +372,7 @@ export default function ScopaGame() {
             }
         }
 
-        // --- Scopa audio ---
+        // ─────────────────── Audio ───────────────────
         const scopaAudio = {
             en: {
                 player: [
@@ -398,7 +390,6 @@ export default function ScopaGame() {
                     'ETVO23_en_SFX.mp3',
                 ],
             },
-            // Можно добавить другие языки по мере появления файлов
         };
 
         function playScopaAudio(role) {
@@ -411,9 +402,9 @@ export default function ScopaGame() {
             audio.play();
         }
 
-        function flash(t, c, role) {
-            flashVal = FLASH_DURATION; flashTxt = t; flashCol = c || '#f0c040';
-            if (t.includes('SCOPA')) {
+        function flash(txt, col, role) {
+            flashVal = FLASH_DURATION; flashTxt = txt; flashCol = col || '#f0c040';
+            if (txt.includes('SCOPA')) {
                 if (role === 'player') playScopaAudio('player');
                 else if (role === 'enemy') playScopaAudio('enemy');
                 trigger([
@@ -424,8 +415,7 @@ export default function ScopaGame() {
             animId = requestAnimationFrame(render);
         }
 
-        // ─────────────────── Table slot helpers ───────────────────
-        // Each card on the table occupies a fixed TSLOTS index so positions never shift.
+        // ─────────────────── Table / hand slot helpers ───────────────────
         function addToTable(c) {
             const used = new Set(Object.values(G.tableSlots));
             let slot = 0;
@@ -468,21 +458,19 @@ export default function ScopaGame() {
         }
 
         // ─────────────────── Game state ───────────────────
+        function dealValid() {
+            let deck, table;
+            do {
+                deck = shuffle(mkDeck());
+                const pH = deck.slice(0, 3);
+                const eH = deck.slice(3, 6);
+                table = deck.slice(6, 10);
+                const kings = table.filter(c => c.v === 10).length;
+                if (kings < 3) return { deck: deck.slice(10), pH, eH, table };
+            } while (true);
+        }
+
         function initGame() {
-            // Deal with 3 kings on table: re-deal until not 3 kings
-            function dealValid() {
-                let deck, table;
-                do {
-                    deck = shuffle(mkDeck());
-                    const pH = deck.slice(0, 3);
-                    const eH = deck.slice(3, 6);
-                    table = deck.slice(6, 10);
-                    const kings = table.filter(c => c.v === 10).length;
-                    if (kings < 3) {
-                        return { deck: deck.slice(10), pH, eH, table };
-                    }
-                } while (true);
-            }
             const deal = dealValid();
             G = {
                 deck: deal.deck,
@@ -496,7 +484,6 @@ export default function ScopaGame() {
             addToEnricoHand(deal.eH);
             G.table = deal.table;
             G.table.forEach((c, i) => { G.tableSlots[c.id] = i; });
-            // Game start: all cards appear immediately (no fade-in)
             [...G.pH, ...G.eH, ...G.table].forEach(c => {
                 fadeMap.set(c.id, { val: 1 });
                 overlayMap.set(c.id, { val: 0, target: 0 });
@@ -507,16 +494,13 @@ export default function ScopaGame() {
         // ─────────────────── Actions ───────────────────
         function selCard(c) {
             if (G.phase !== 'player') return;
-            trigger([
-                { duration: 8 },
-            ], { intensity: 0.3 });
+            trigger([{ duration: 8 }], { intensity: 0.3 });
+            playFlipAudio();
             if (G.sel && G.sel.id === c.id) {
-                // Deselect
                 setOverlayTarget(G.sel.id, 0);
                 G.tablesel.forEach(tc => setOverlayTarget(tc.id, 0));
                 G.sel = null; G.tablesel = [];
             } else {
-                // Switch selection
                 if (G.sel) setOverlayTarget(G.sel.id, 0);
                 G.tablesel.forEach(tc => setOverlayTarget(tc.id, 0));
                 G.tablesel = [];
@@ -528,9 +512,8 @@ export default function ScopaGame() {
 
         function toggleTableCard(tc) {
             if (!G.sel || G.phase !== 'player') return;
-            trigger([
-                { duration: 8 },
-            ], { intensity: 0.3 });
+            trigger([{ duration: 8 }], { intensity: 0.3 });
+            playFlipAudio();
             const idx = G.tablesel.findIndex(x => x.id === tc.id);
             if (idx >= 0) { G.tablesel.splice(idx, 1); setOverlayTarget(tc.id, 0); }
             else { G.tablesel.push(tc); setOverlayTarget(tc.id, 1); }
@@ -539,11 +522,10 @@ export default function ScopaGame() {
 
         function doTake() {
             if (!G.sel || !isValidCapture(G.sel, G.tablesel, G.table) || G.phase !== 'player') return;
-            trigger([
-                { duration: 8 },
-            ], { intensity: 0.3 });
+            trigger([{ duration: 8 }], { intensity: 0.3 });
+            playDealAudio();
             const c = G.sel, cap = G.tablesel;
-            const sc = isScopa(G.table, cap);  // check BEFORE removing — board must be empty after
+            const sc = isScopa(G.table, cap);
             removeFromTable(cap.map(x => x.id));
             G.pP.push(c, ...cap);
             removeFromHand(c.id);
@@ -556,31 +538,26 @@ export default function ScopaGame() {
 
         function doDiscard() {
             if (!G.sel || G.phase !== 'player') return;
-            trigger([
-                { duration: 8 },
-            ], { intensity: 0.3 });
-            // New rule: cannot discard a card if it can capture (single or multi-card)
-            // Check if selected card can capture anything
+            trigger([{ duration: 8 }], { intensity: 0.3 });
+            playFlipAudio();
             const sel = G.sel;
             let canCapture = false;
-            // Single card match
             for (const tc of G.table) {
                 if (tc.v === sel.v) { canCapture = true; break; }
             }
-            // Multi-card match
             if (!canCapture && G.table.length > 1) {
                 const n = G.table.length;
                 for (let mask = 3; mask < (1 << n); mask++) {
-                    if ((mask & (mask - 1)) === 0) continue; // skip single-bit masks
+                    if ((mask & (mask - 1)) === 0) continue;
                     let sum = 0;
                     for (let i = 0; i < n; i++) if (mask & (1 << i)) sum += G.table[i].v;
                     if (sum === sel.v && !G.table.some(t => t.v === sel.v)) { canCapture = true; break; }
                 }
             }
-            if (canCapture) return; // Cannot discard if capture possible
+            if (canCapture) return;
             setOverlayTarget(sel.id, 0);
             addToTable(sel);
-            addFadeIn(sel.id);  // new card on table fades in
+            addFadeIn(sel.id);
             removeFromHand(sel.id);
             G.lastCap = ''; G.sel = null; G.tablesel = [];
             afterP();
@@ -597,10 +574,9 @@ export default function ScopaGame() {
             if (!mounted || G.phase !== 'enrico') return;
             const { c, cap } = enricoAI(G.eH, G.table);
             G.enricoAnim = { c, cap: cap || null };
-            // Fade the played card in face-up, add red overlay
+            playFlipAudio();
             addFadeIn(c.id);
             setOverlayTarget(c.id, 1);
-            // Highlight the table cards being captured
             if (cap) cap.forEach(tc => setOverlayTarget(tc.id, 1));
             render();
             enricoTimer = setTimeout(finishEnrico, 900);
@@ -612,6 +588,7 @@ export default function ScopaGame() {
             G.enricoAnim = null;
             clearAllOverlays();
             if (cap) {
+                playDealAudio();
                 const sc = isScopa(G.table, cap);
                 removeFromTable(cap.map(x => x.id));
                 G.eP.push(c, ...cap);
@@ -629,7 +606,6 @@ export default function ScopaGame() {
             else { G.phase = 'player'; render(); }
         }
 
-        // Mid-round redeal: table stays intact, only new hands are dealt
         function redeal() {
             if (G.deck.length >= 6) {
                 const newCards = G.deck.splice(0, 6);
@@ -637,12 +613,10 @@ export default function ScopaGame() {
                 addToHand(newCards.slice(0, 3));
                 G.eHandSlots = {}; G.eH = [];
                 addToEnricoHand(newCards.slice(3, 6));
-                // New hand cards fade in
                 newCards.forEach(c => {
                     fadeMap.set(c.id, { val: 0 });
                     overlayMap.set(c.id, { val: 0, target: 0 });
                 });
-                // Preserve round starter: if round 1, player; else enrico
                 G.phase = (G.round === 1) ? 'player' : 'enrico';
                 scheduleAnim();
                 render();
@@ -655,7 +629,6 @@ export default function ScopaGame() {
         }
 
         function endRound() {
-            // End of round: remaining table cards now go to last capturer
             if (G.table.length) {
                 (G.lastCap === 'p' ? G.pP : G.eP).push(...G.table);
                 G.table = []; G.tableSlots = {};
@@ -665,7 +638,6 @@ export default function ScopaGame() {
             G.totP += pts.p; G.totE += pts.e;
             G.phase = 'end';
 
-            // Localized scoring summary
             const lines = [];
             lines.push(`${t.scoring} ${G.round}`);
             lines.push('─────────────────────────────');
@@ -698,20 +670,6 @@ export default function ScopaGame() {
         function newRound() {
             fadeMap.clear();
             overlayMap.clear();
-            // Deal with 3 kings on table: re-deal until not 3 kings
-            function dealValid() {
-                let deck, table;
-                do {
-                    deck = shuffle(mkDeck());
-                    const pH = deck.slice(0, 3);
-                    const eH = deck.slice(3, 6);
-                    table = deck.slice(6, 10);
-                    const kings = table.filter(c => c.v === 10).length;
-                    if (kings < 3) {
-                        return { deck: deck.slice(10), pH, eH, table };
-                    }
-                } while (true);
-            }
             const deal = dealValid();
             G.deck = deal.deck;
             G.pP = []; G.eP = []; G.pSc = 0; G.eSc = 0; G.lastCap = '';
@@ -811,13 +769,11 @@ export default function ScopaGame() {
             if (rafAnim) cancelAnimationFrame(rafAnim);
             if (enricoTimer) clearTimeout(enricoTimer);
         };
-    }, [setModal]); // setModal is stable
+    }, [setModal]);
 
     // ── Modal OK handler (React side) ──
     const handleModalOk = useCallback(() => {
-        trigger([
-            { duration: 8 },
-        ], { intensity: 0.3 });
+        trigger([{ duration: 8 }], { intensity: 0.3 });
         const cb = modalCbRef.current;
         modalCbRef.current = null;
         modalOpenRef.current = false;
