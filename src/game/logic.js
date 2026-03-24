@@ -28,9 +28,12 @@ function subsets(a) {
 }
 
 export function getCaps(c, table) {
+  // Only allow capturing one card of the same value, never multiple at once
   const ex = table.filter(t => t.v === c.v);
-  if (ex.length) return [ex];
-  return subsets(table).filter(s => s.length > 1 && s.reduce((a, t) => a + t.v, 0) === c.v);
+  if (ex.length) return ex.map(card => [card]);
+  // Only allow sum captures if no card of the same value is present
+  return subsets(table)
+    .filter(s => s.length > 1 && s.reduce((a, t) => a + t.v, 0) === c.v && !table.some(t => t.v === c.v));
 }
 
 export function isScopa(table, cap) {

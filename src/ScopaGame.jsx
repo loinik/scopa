@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { mkDeck, shuffle, isScopa, score, cmpScore, enricoAI } from './game/logic';
+import { play, preloadAll } from './game/audioManager';
 import { useWebHaptics } from "web-haptics/react";
 import {
     CW, CH, SUIT_SY, VAL_SX, BACK_SX, BACK_SY,
@@ -19,30 +20,47 @@ import de from './locales/de.js';
 const LOCALES = { en, it, kk, uk, ru, fr, de };
 
 // --- Card Deal and Flip audio ---
+const BASE = import.meta.env.BASE_URL + 'sound/';
+
 const dealAudioFiles = [
-    'Card_Deal01_SFX.mp3',
-    'Card_Deal02_SFX.mp3',
+    BASE + 'Card_Deal01_SFX.mp3',
+    BASE + 'Card_Deal02_SFX.mp3',
 ];
 const flipAudioFiles = [
-    'CardFlip01_SFX.mp3',
-    'CardFlip02_SFX.mp3',
-    'CardFlip03_SFX.mp3',
-    'CardFlip04_SFX.mp3',
-    'CardFlip05_SFX.mp3',
+    BASE + 'CardFlip01_SFX.mp3',
+    BASE + 'CardFlip02_SFX.mp3',
+    BASE + 'CardFlip03_SFX.mp3',
+    BASE + 'CardFlip04_SFX.mp3',
+    BASE + 'CardFlip05_SFX.mp3',
 ];
 
+const scopaAudio = {
+    en: {
+        player: [
+            'NETVO019_en_SFX.mp3',
+            'NETVO020_en_SFX.mp3',
+            'NETVO021_en_SFX.mp3',
+            'NETVO023_en_SFX.mp3',
+            'NETVO023x_en_SFX.mp3',
+        ],
+        enemy: [
+            'ETVO19_en_SFX.mp3',
+            'ETVO20_en_SFX.mp3',
+            'ETVO21_en_SFX.mp3',
+            'ETVO22_en_SFX.mp3',
+            'ETVO23_en_SFX.mp3',
+        ],
+    },
+};
+
 function playDealAudio() {
-    const file = dealAudioFiles[Math.floor(Math.random() * dealAudioFiles.length)];
-    const audio = new Audio(import.meta.env.BASE_URL + 'sound/' + file);
-    audio.volume = 1.0;
-    audio.play();
+    const url = dealAudioFiles[Math.floor(Math.random() * dealAudioFiles.length)];
+    play(url, 0.75);
 }
 
 function playFlipAudio() {
-    const file = flipAudioFiles[Math.floor(Math.random() * flipAudioFiles.length)];
-    const audio = new Audio(import.meta.env.BASE_URL + 'sound/' + file);
-    audio.volume = 1.0;
-    audio.play();
+    const url = flipAudioFiles[Math.floor(Math.random() * flipAudioFiles.length)];
+    play(url, 0.75);
 }
 
 
@@ -103,6 +121,15 @@ export default function ScopaGame() {
         resize();
         return () => window.removeEventListener('resize', resize);
     }, [resize]);
+
+    useEffect(() => {
+        const scopaSfx = Object.values(scopaAudio).flatMap(lang =>
+            [...(lang.player ?? []), ...(lang.enemy ?? [])]
+        ).map(f => BASE + f);
+
+        preloadAll([...dealAudioFiles, ...flipAudioFiles, ...scopaSfx]);
+    }, []);
+
 
     // ── Game engine (all canvas logic in one closure) ──
     useEffect(() => {
@@ -378,34 +405,12 @@ export default function ScopaGame() {
             }
         }
 
-        // ─────────────────── Audio ───────────────────
-        const scopaAudio = {
-            en: {
-                player: [
-                    'NETVO019_en_SFX.mp3',
-                    'NETVO020_en_SFX.mp3',
-                    'NETVO021_en_SFX.mp3',
-                    'NETVO023_en_SFX.mp3',
-                    'NETVO023x_en_SFX.mp3',
-                ],
-                enemy: [
-                    'ETVO19_en_SFX.mp3',
-                    'ETVO20_en_SFX.mp3',
-                    'ETVO21_en_SFX.mp3',
-                    'ETVO22_en_SFX.mp3',
-                    'ETVO23_en_SFX.mp3',
-                ],
-            },
-        };
-
         function playScopaAudio(role) {
             const lang = (locale in scopaAudio) ? locale : 'en';
             const arr = scopaAudio[lang]?.[role] || scopaAudio['en'][role];
-            if (!arr || !arr.length) return;
-            const file = arr[Math.floor(Math.random() * arr.length)];
-            const audio = new Audio(import.meta.env.BASE_URL + 'sound/' + file);
-            audio.volume = 1.0;
-            audio.play();
+            if (!arr?.length) return;
+            const url = BASE + arr[Math.floor(Math.random() * arr.length)];
+            play(url, 1.0);
         }
 
         function flash(txt, col, role) {
