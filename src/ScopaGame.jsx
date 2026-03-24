@@ -312,9 +312,11 @@ export default function ScopaGame() {
             ctx.clearRect(0, 0, 640, 385);
             ctx.drawImage(imgs.bg, 0, 0, 640, 385);
 
-            if (G.deck.length > 0 && imgs.ovl) {
-                ctx.drawImage(imgs.ovl, 106, 1, 104, 104, SLOT_2.x, SLOT_2.y, SLOT_2.w, SLOT_2.h);
-                ctx.drawImage(imgs.ovl, 1, 1, 104, 104, SLOT_1.x, SLOT_1.y, SLOT_1.w, SLOT_1.h);
+            // SLOT_2 = Enrico's captured pile — visible after his first capture
+            // SLOT_1 = Player's captured pile  — visible after player's first TAKE
+            if (imgs.ovl) {
+                if (G.eTaken) ctx.drawImage(imgs.ovl, 106, 1, 104, 104, SLOT_2.x, SLOT_2.y, SLOT_2.w, SLOT_2.h);
+                if (G.pTaken) ctx.drawImage(imgs.ovl, 1, 1, 104, 104, SLOT_1.x, SLOT_1.y, SLOT_1.w, SLOT_1.h);
             }
 
             for (const c of G.table) {
@@ -490,6 +492,7 @@ export default function ScopaGame() {
                 table: [], tableSlots: {},
                 pP: [], eP: [], pSc: 0, eSc: 0, totP: 0, totE: 0,
                 phase: 'player', sel: null, tablesel: [], lastCap: '', round: 1,
+                pTaken: false, eTaken: false,  // captured-pile visibility flags
             };
             addToHand(deal.pH);
             addToEnricoHand(deal.eH);
@@ -541,6 +544,7 @@ export default function ScopaGame() {
             G.pP.push(c, ...cap);
             removeFromHand(c.id);
             G.lastCap = 'p';
+            G.pTaken = true;  // player's captured pile is now visible
             clearAllOverlays();
             if (sc) { G.pSc++; flash('⚡ SCOPA!', '#f0c040', 'player'); }
             G.sel = null; G.tablesel = [];
@@ -604,6 +608,7 @@ export default function ScopaGame() {
                 removeFromTable(cap.map(x => x.id));
                 G.eP.push(c, ...cap);
                 G.lastCap = 'e';
+                G.eTaken = true;  // Enrico's captured pile is now visible
                 if (sc) {
                     G.eSc++;
                     flash('Enrico SCOPA!', '#e07070', 'enemy');
@@ -688,6 +693,7 @@ export default function ScopaGame() {
             G.handSlots = {}; G.pH = [];
             G.eHandSlots = {}; G.eH = [];
             G.enricoAnim = null;
+            G.pTaken = false; G.eTaken = false;  // reset pile visibility for new round
             addToHand(deal.pH);
             addToEnricoHand(deal.eH);
             G.table = deal.table;
